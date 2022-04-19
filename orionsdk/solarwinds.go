@@ -13,27 +13,27 @@ func newSolarWinds(npmServer, username, password string) *SolarWinds {
 
 
 func (s *SolarWinds) doesNodesExist(nodeName string) bool {
-	if s.getNodes(nodeName) == nil {
+	if s.getNodes(nodeName) == "" {
 		return false
 	} else{
 		return true
 	}
 }
 
-func (s *SolarWinds) getNodes(nodeName string ) interface{} {
+func (s *SolarWinds) getNodes(nodeName string ) string {
 	nodeId, _ := s.swis.query("SELECT NodeID, Caption FROM Orion.Nodes WHERE Caption = @caption", []string{nodeName})
 	if nodeId == nil {
-		return nil
+		return ""
 	}else {
-		return nodeId
+		return string(nodeId)
 	}
 }
 
-func (s *SolarWinds) getNodeUri(nodeName string) interface{}{
+func (s *SolarWinds) getNodeUri(nodeName string) string {
 	nodeUri, _ := s.swis.query("SELECT Caption, Uri FROM Orion.Nodes WHERE Caption = @caption", []string{nodeName})
 	if nodeUri == nil {
-		return nil
+		return ""
 	}else {
-		return nodeUri
+		return string(nodeUri)
 	}
 }

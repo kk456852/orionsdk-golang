@@ -1,27 +1,67 @@
 package orionsdk
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	_ "net/http"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/http/cookiejar"
 )
 
 
 type SwisClient struct {
-	Url 	string
-	Session string
+	Url 		string
+	UserName 	string
+	Password 	string
+	httpClient  *http.Client
 }
 
 func newSwisClient(hostname, username, password string) *SwisClient {
 	url := fmt.Sprintf("https://%s:17778/SolarWinds/InformationService/v3/Json/", hostname)
 	return &SwisClient {
 		Url: url,
-		Session: "",
+		UserName: username,
+		Password: password,
+		httpClient: NewHttpClient(),
 	}
+}
+
+func NewHttpClient() *http.Client {
+	// cookiejar.New source code return jar, nil
+	jar, _ := cookiejar.New(nil)
+	client := &http.Client{
+		Jar: jar,
+	}
+	return client
 }
 
 // request 请求
 func (c *SwisClient) _req(method, frag string, data map[string]interface{}) ([]byte, error) {
-	return nil, nil
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Json marshal error: %v", err)
+		return nil, err
+	}
+	httpReq, createReqErr := http.NewRequest(method, c.Url + frag, bytes.NewBuffer(jsonData))
+	if createReqErr != nil {
+
+	}
+	httpReq.SetBasicAuth(c.UserName, c.Password)
+	httpReq.Header.Add("Content-Type", "application/json")
+	httpRes, err := c.httpClient.Do(httpReq)
+	if err != nil || 400 <= httpRes.StatusCode  || httpRes.StatusCode < 600 {
+		log.Printf("Request failed cause: %v, response body is %v" , err, httpRes.Body)
+		return nil, err
+	}
+	defer httpRes.Body.Close()
+	result, err := ioutil.ReadAll(httpRes.Body)
+	if err != nil{
+		log.Printf("Read http response body failed: %v", err)
+		return nil, err
+	}
+	return result, nil
 }
 
 func (c *SwisClient) query(query string, params []string) ([]byte, error) {
